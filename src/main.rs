@@ -197,7 +197,11 @@ impl App {
 
             // Get response from LLM
             let response = match self.llm.generate_response(&self.llm.format_prompt(&user_message, Some(&self.recent_commands))).await {
-                Ok(response) => response,
+                Ok(response) => {
+                    // Add the exchange to LLM's conversation history
+                    self.llm.add_to_history(user_message.clone(), response.clone());
+                    response
+                }
                 Err(_) => {
                     // Fallback responses
                     if user_message.to_lowercase().contains("treat") {

@@ -89,11 +89,12 @@ impl AppUI {
                 Constraint::Length(6),    // Pet ASCII art
                 Constraint::Length(1),     // Spacing
                 Constraint::Min(5),        // Chat area
-                Constraint::Length(1),     // Spacing
-                Constraint::Length(3),     // Input box
             ])
             .split(main_area);
 
+        // Calculate visible lines in chat area
+        let chat_height = chunks[2].height as usize;
+        
         // Pet ASCII art section with modern styling
         let mood_color = match pet_mood {
             m if m > 0.8 => Color::LightGreen,
@@ -118,51 +119,86 @@ impl AppUI {
         f.render_widget(pet_text, chunks[0]);
 
         // Chat history with modern styling
-        let messages_text: Vec<Line> = self.messages.iter().flat_map(|msg| {
+        let mut messages_text: Vec<Line> = self.messages.iter().flat_map(|msg| {
             let mut lines = Vec::new();
-            if msg.starts_with("You: ") {
-                let (prefix, content) = msg.split_at(5);
-                for (i, line) in content.split('\n').enumerate() {
-                    if i == 0 {
-                        lines.push(Line::from(vec![
-                            Span::styled(prefix, Style::default().fg(Color::Cyan).bold()),
-                            Span::raw(" "),  // Add spacing
-                            Span::styled(line, Style::default().fg(Color::White))
-                        ]));
-                    } else {
-                        lines.push(Line::from(vec![
-                            Span::styled("     ", Style::default().fg(Color::Cyan)),
-                            Span::raw(" "),  // Add spacing
-                            Span::styled(line, Style::default().fg(Color::White))
-                        ]));
-                    }
-                }
+            // Extract the role and content from the message
+            let (role, content) = if msg.starts_with("user:") || msg.starts_with("assistant:") {
+                let parts: Vec<&str> = msg.splitn(2, ':').collect();
+                (parts[0], parts.get(1).map_or("", |v| v.trim()))
+            } else if msg.starts_with("You: ") {
+                ("user", &msg[5..])
             } else {
-                let (prefix, content) = msg.split_once(": ").unwrap_or((msg, ""));
-                for (i, line) in content.split('\n').enumerate() {
-                    if i == 0 {
-                        lines.push(Line::from(vec![
-                            Span::styled(format!("{}: ", prefix), Style::default().fg(mood_color).bold()),
-                            Span::raw(" "),  // Add spacing
-                            Span::styled(line, Style::default().fg(Color::Gray))
-                        ]));
-                    } else {
-                        lines.push(Line::from(vec![
-                            Span::styled("     ", Style::default().fg(mood_color)),
-                            Span::raw(" "),  // Add spacing
-                            Span::styled(line, Style::default().fg(Color::Gray))
-                        ]));
+                let parts: Vec<&str> = msg.splitn(2, ':').collect();
+                ("assistant", parts.get(1).map_or(msg.as_str(), |v| v.trim()))
+            };
+
+            // Format based on the role
+            match role {
+                "user" => {
+                    for (i, line) in content.split('\n').enumerate() {
+                        let line = line.trim();
+                        if !line.is_empty() {
+                            if i == 0 {
+                                lines.push(Line::from(vec![
+                                    Span::styled("You: ", Style::default().fg(Color::Cyan).bold()),
+                                    Span::styled(line, Style::default().fg(Color::White))
+                                ]));
+                            } else {
+                                lines.push(Line::from(vec![
+                                    Span::styled("     ", Style::default().fg(Color::Cyan)),
+                                    Span::styled(line, Style::default().fg(Color::White))
+                                ]));
+                            }
+                        }
                     }
+                },
+                _ => {
+                    // Clean up content by removing extra whitespace and empty lines
+                    let content = content.lines()
+                        .map(|line| line.trim())
+                        .filter(|line| !line.is_empty())
+                        .collect::<Vec<_>>();
+
+                    for (i, line) in content.iter().enumerate() {
+                        if i == 0 {
+                            lines.push(Line::from(vec![
+                                Span::styled(format!("{}: ", pet_name), Style::default().fg(mood_color).bold()),
+                                Span::styled(*line, Style::default().fg(Color::Gray))
+                            ]));
+                        } else {
+                            lines.push(Line::from(vec![
+                                Span::styled("     ", Style::default().fg(mood_color)),
+                                Span::styled(*line, Style::default().fg(Color::Gray))
+                            ]));
+                        }
+                    }
+                    lines.push(Line::from(""));
                 }
-                lines.push(Line::from(""));
             }
             lines
         }).collect();
+
+        // Add the current input line with cursor before creating the paragraph
+        let cursor = "█";
+        let input_line = Line::from(vec![
+            Span::styled("> ", Style::default().fg(Color::Cyan).bold()),
+            Span::styled(&self.input, Style::default().fg(Color::White)),
+            Span::styled(cursor, Style::default().fg(Color::White).add_modifier(Modifier::SLOW_BLINK))
+        ]);
+        messages_text.push(input_line);
 
         let messages_block = Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::DarkGray))
             .title(Span::styled(" Chat History ", Style::default().fg(Color::White).bold()));
+
+        // Calculate total lines and adjust scroll offset to keep cursor visible
+        let total_lines = messages_text.len();
+        if total_lines > chat_height.saturating_sub(2) { // Account for borders
+            self.scroll_offset = total_lines.saturating_sub(chat_height.saturating_sub(2));
+        } else {
+            self.scroll_offset = 0;
+        }
 
         let messages_paragraph = Paragraph::new(messages_text)
             .block(messages_block)
@@ -171,15 +207,5 @@ impl AppUI {
             .alignment(Alignment::Left);
 
         f.render_widget(messages_paragraph, chunks[2]); // Updated index
-
-        // Input box with modern styling
-        let input = Paragraph::new(self.input.as_str())
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Blue))
-                .title(Span::styled(" Input ", Style::default().fg(Color::Blue).bold())))
-            .style(Style::default().fg(Color::White));
-            
-        f.render_widget(input, chunks[4]); // Updated index
     }
 }

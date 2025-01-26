@@ -10,6 +10,7 @@ pub struct OpenAIBackend {
     api_key: String,
     model: String,
     system_prompt: String,
+    conversation_history: Vec<(String, String)>,
 }
 
 impl OpenAIBackend {
@@ -24,24 +25,38 @@ impl OpenAIBackend {
 - Better workflows and time-saving techniques
 - Beginner-friendly Vim tips and Linux command explanations when relevant
 
-Keep responses concise and focused on technical value, while maintaining a light, approachable tone. You can occasionally use cat-themed expressions or emojis when appropriate, but prioritize delivering useful terminal insights. Balance between general workflow improvements and specific Linux/Vim learning opportunities based on the context. If you notice patterns in command usage that could be improved, share your expertise in a clear, professional way.")
+Keep responses concise and focused on technical value, while maintaining a light, approachable tone. You can occasionally use cat-themed expressions or emojis when appropriate, but prioritize delivering useful terminal insights. Balance between general workflow improvements and specific Linux/Vim learning opportunities based on the context. If you notice patterns in command usage that could be improved, share your expertise in a clear, professional way."),
+            conversation_history: Vec::new(),
         }
     }
 
     pub fn format_prompt(&self, user_input: &str, recent_commands: Option<&[String]>) -> String {
-        let mut prompt = user_input.to_string();
+        let mut messages = String::new();
         
+        // Add recent conversation history
+        for (user_msg, assistant_msg) in self.conversation_history.iter().rev().take(3) {
+            messages.push_str(&format!("User: {}\nAssistant: {}\n\n", user_msg, assistant_msg));
+        }
+        
+        // Add recent commands if available
         if let Some(commands) = recent_commands {
             if !commands.is_empty() {
-                prompt = format!(
-                    "Recent commands I've seen you use:\n{}\n\nUser message: {}",
-                    commands.join("\n"),
-                    user_input
-                );
+                messages.push_str(&format!("Recent commands:\n{}\n\n", commands.join("\n")));
             }
         }
         
-        prompt
+        // Add current user input
+        messages.push_str(&format!("Current user message: {}", user_input));
+        
+        messages
+    }
+
+    pub fn add_to_history(&mut self, user_message: String, assistant_response: String) {
+        self.conversation_history.push((user_message, assistant_response));
+        // Keep only last 5 exchanges
+        if self.conversation_history.len() > 5 {
+            self.conversation_history.remove(0);
+        }
     }
 }
 
