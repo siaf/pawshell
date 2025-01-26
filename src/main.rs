@@ -112,6 +112,20 @@ impl App {
     async fn handle_input(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         if !self.ui.input.is_empty() {
             let user_message = self.ui.input.clone();
+            
+            // Check for /exit command
+            if user_message.trim() == "/exit" {
+                self.ui.add_message(format!("{}: Goodbye! Take care! 👋", self.state.name));
+                self.save_state()?;
+                // Restore terminal state before exit
+                crossterm::terminal::disable_raw_mode()?;
+                crossterm::execute!(
+                    std::io::stdout(),
+                    crossterm::terminal::LeaveAlternateScreen
+                )?;
+                std::process::exit(0);
+            }
+            
             self.ui.add_message(format!("You: {}", user_message));
 
             // Track command if it looks like one
@@ -174,6 +188,22 @@ fn ui(f: &mut Frame, app: &mut App) {
     app.ui.render(f, &app.state.name, app.state.mood, &app.config.pet_ascii);
 }
 
+// Terminal cleanup guard
+struct CleanupGuard<B: Backend + std::io::Write> {
+    terminal: Terminal<B>,
+}
+
+impl<B: Backend + std::io::Write> Drop for CleanupGuard<B> {
+    fn drop(&mut self) {
+        // Restore terminal
+        let _ = crossterm::terminal::disable_raw_mode();
+        let _ = crossterm::execute!(
+            self.terminal.backend_mut(),
+            crossterm::terminal::LeaveAlternateScreen
+        );
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load environment variables
@@ -184,7 +214,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout = std::io::stdout();
     crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let terminal = Terminal::new(backend)?;
+
+    // Create cleanup guard
+    let mut guard = CleanupGuard { terminal };
 
     // Create app state
     let mut app = App::new();
@@ -192,7 +225,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tick_rate = Duration::from_millis(100);
 
     loop {
-        terminal.draw(|f| ui(f, &mut app))?;
+        guard.terminal.draw(|f| ui(f, &mut app))?;
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
@@ -235,13 +268,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             last_tick = Instant::now();
         }
     }
-
-    // Cleanup
-    crossterm::terminal::disable_raw_mode()?;
-    crossterm::execute!(
-        terminal.backend_mut(),
-        crossterm::terminal::LeaveAlternateScreen
-    )?;
 
     Ok(())
 }
