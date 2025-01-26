@@ -1,6 +1,7 @@
 mod pet;
 mod llm;
 mod ui;
+mod config;
 
 use crossterm::event::{self, Event, KeyCode};
 use std::time::{Duration, Instant};
@@ -12,15 +13,23 @@ use crate::ui::AppUI;
 
 use ratatui::prelude::*;
 
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::path::PathBuf;
+use dirs;
+
 struct App {
     ui: AppUI,
     state: PetState,
     llm: OpenAIBackend,
+    recent_commands: Vec<String>,
+    config: config::Config,
 }
 
 impl App {
     fn new() -> Self {
         let state: PetState = confy::load("petcli", None).unwrap_or_default();
+        let config: config::Config = confy::load("petcli", None).unwrap_or_default();
         let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY not found in environment variables");
         let llm = OpenAIBackend::new(api_key);
         let mut ui = AppUI::new();
@@ -31,20 +40,84 @@ impl App {
             ui.add_message(format!("{}: {}", state.name, pet_response));
         }
 
-        Self { ui, state, llm }
+        let mut app = Self { ui, state, llm, recent_commands: Vec::new(), config };
+        app.load_shell_history();
+        app
     }
 
+    fn load_shell_history(&mut self) {
+        if let Some(home_dir) = dirs::home_dir() {
+            let history_files = vec![
+                home_dir.join(".zsh_history"),
+                home_dir.join(".bash_history"),
+                home_dir.join(".history"),
+            ];
+
+            for history_file in history_files {
+                if let Ok(lines) = read_lines(history_file) {
+                    for line in lines.flatten() {
+                        // Clean the history line (remove timestamps if present)
+                        let cmd = clean_history_line(&line);
+                        if !cmd.is_empty() {
+                            self.recent_commands.push(cmd);
+                            if self.recent_commands.len() > self.config.command_history_limit {
+                                self.recent_commands.remove(0);
+                            }
+                        }
+                    }
+                    break; // Stop after finding first available history file
+                }
+            }
+        }
+    }
+}
+
+fn clean_history_line(line: &str) -> String {
+    // Remove common history file formatting
+    // zsh format: : 1234567890:0;command
+    // bash format: #1234567890
+    // command
+    if line.starts_with(':') {
+        if let Some(cmd) = line.split(';').last() {
+            return cmd.trim().to_string();
+        }
+    }
+    // Remove timestamp prefix if present
+    if let Some(cmd) = line.split_whitespace().last() {
+        cmd.trim().to_string()
+    } else {
+        line.trim().to_string()
+    }
+}
+
+fn read_lines(filename: PathBuf) -> io::Result<io::Lines<io::BufReader<File>>> {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
+}
+
+impl App {
     async fn handle_input(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         if !self.ui.input.is_empty() {
             let user_message = self.ui.input.clone();
             self.ui.add_message(format!("You: {}", user_message));
+
+            // Track command if it looks like one
+            if user_message.starts_with('$') {
+                if let Some(cmd) = user_message.strip_prefix('$') {
+                    self.recent_commands.push(cmd.trim().to_string());
+                    // Keep only last 5 commands
+                    if self.recent_commands.len() > 5 {
+                        self.recent_commands.remove(0);
+                    }
+                }
+            }
 
             // Update mood and interaction time
             self.state.last_interaction = chrono::Utc::now();
             self.state.mood = (self.state.mood + 0.1).min(1.0);
 
             // Get response from LLM
-            let response = match self.llm.generate_response(&user_message).await {
+            let response = match self.llm.generate_response(&self.llm.format_prompt(&user_message, Some(&self.recent_commands))).await {
                 Ok(response) => response,
                 Err(_) => {
                     // Fallback responses
@@ -71,6 +144,7 @@ impl App {
         }
         Ok(())
     }
+
 
     fn update(&mut self) {
         let now = chrono::Utc::now();

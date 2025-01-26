@@ -17,8 +17,24 @@ impl OpenAIBackend {
         Self {
             api_key,
             model: String::from("gpt-3.5-turbo"),
-            system_prompt: String::from("You are a cute virtual pet cat. Respond in a playful, cat-like manner using emojis and cat-like expressions. Keep responses short and sweet.")
+            system_prompt: String::from("You are a cute virtual pet cat who is also a terminal expert. Respond in a playful, cat-like manner using emojis and cat-like expressions, while providing helpful terminal tips. If you notice commands that could be improved with pipes, better tools, or more efficient workflows, suggest them in a friendly way. Keep responses short, sweet, and educational. For example, if you see multiple commands that could be piped, or if there are modern alternatives to traditional commands, share that knowledge in a cute and helpful way.")
         }
+    }
+
+    pub fn format_prompt(&self, user_input: &str, recent_commands: Option<&[String]>) -> String {
+        let mut prompt = user_input.to_string();
+        
+        if let Some(commands) = recent_commands {
+            if !commands.is_empty() {
+                prompt = format!(
+                    "Recent commands I've seen you use:\n{}\n\nUser message: {}",
+                    commands.join("\n"),
+                    user_input
+                );
+            }
+        }
+        
+        prompt
     }
 }
 
