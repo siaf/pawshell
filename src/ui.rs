@@ -1,4 +1,4 @@
-use crossterm::event::{Event, KeyCode};
+use crossterm::event::KeyCode;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, ListState, Paragraph, Wrap};
 use ratatui::text::{Line, Span};
@@ -70,21 +70,46 @@ impl AppUI {
         f.render_widget(pet_text, chunks[0]);
 
         // Chat history
-        let messages_text = self.messages.iter().map(|msg| {
+        let messages_text: Vec<Line> = self.messages.iter().flat_map(|msg| {
+            let mut lines = Vec::new();
             if msg.starts_with("You: ") {
                 let (prefix, content) = msg.split_at(5);
-                Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(Color::Yellow)),
-                    Span::raw(content)
-                ])
+                // Split content by newlines and create styled lines
+                for (i, line) in content.split('\n').enumerate() {
+                    if i == 0 {
+                        lines.push(Line::from(vec![
+                            Span::styled(prefix, Style::default().fg(Color::Yellow)),
+                            Span::raw(line)
+                        ]));
+                    } else {
+                        lines.push(Line::from(vec![
+                            Span::styled("     ", Style::default().fg(Color::Yellow)),
+                            Span::raw(line)
+                        ]));
+                    }
+                }
             } else {
                 let (prefix, content) = msg.split_once(": ").unwrap_or((msg, ""));
-                Line::from(vec![
-                    Span::styled(format!("{}: ", prefix), Style::default().fg(Color::Green)),
-                    Span::raw(content)
-                ])
+                // Split content by newlines and create styled lines
+                for (i, line) in content.split('\n').enumerate() {
+                    if i == 0 {
+                        lines.push(Line::from(vec![
+                            Span::styled(format!("{}: ", prefix), Style::default().fg(Color::Green)),
+                            Span::raw(line)
+                        ]));
+                    } else {
+                        lines.push(Line::from(vec![
+                            Span::styled("     ", Style::default().fg(Color::Green)),
+                            Span::raw(line)
+                        ]));
+                    }
+                }
+                // Add blank line after pet's response
+                lines.push(Line::from(""));
             }
-        }).collect::<Vec<Line>>();
+            lines
+        }).collect();
+
         let messages_paragraph = Paragraph::new(messages_text)
             .block(Block::default().borders(Borders::ALL).title("Chat History"))
             .wrap(Wrap { trim: false })
