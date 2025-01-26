@@ -31,7 +31,16 @@ impl App {
     fn new() -> Self {
         config_path::ensure_config_dir().expect("Failed to create config directory");
         let config_path = config_path::get_config_file_path(None);
-        let config: config::Config = confy::load_path(&config_path).unwrap_or_default();
+        let config: config::Config = if config_path.exists() {
+            std::fs::read_to_string(&config_path)
+                .and_then(|content| toml::from_str(&content).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e)))
+                .unwrap_or_default()
+        } else {
+            let default_config = config::Config::default();
+            let toml = toml::to_string(&default_config).expect("Failed to serialize config");
+            std::fs::write(&config_path, toml).expect("Failed to write default config");
+            default_config
+        };
         let mut state: PetState = confy::load("petcli", None).unwrap_or_default();
         state.name = config.pet_name.clone();
         let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY not found in environment variables");
@@ -162,7 +171,7 @@ impl App {
 }
 
 fn ui(f: &mut Frame, app: &mut App) {
-    app.ui.render(f, &app.state.name, app.state.mood);
+    app.ui.render(f, &app.state.name, app.state.mood, &app.config.pet_ascii);
 }
 
 #[tokio::main]

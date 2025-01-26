@@ -3,13 +3,6 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, ListState, Paragraph, Wrap};
 use ratatui::text::{Line, Span};
 
-const CAT_ASCII: &str = r#"
-  /\___/\
- (  o o  )
- (  =^=  )
-  (____)
-"#;
-
 pub struct AppUI {
     pub input: String,
     pub messages: Vec<String>,
@@ -57,7 +50,7 @@ impl AppUI {
         self.scroll_to_bottom();
     }
 
-    pub fn render(&mut self, f: &mut Frame, pet_name: &str, pet_mood: f32) {
+    pub fn render(&mut self, f: &mut Frame, pet_name: &str, pet_mood: f32, pet_ascii: &str) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -71,7 +64,7 @@ impl AppUI {
         let pet_block = Block::default()
             .borders(Borders::ALL)
             .title(format!("{} (Mood: {:.0}%)", pet_name, pet_mood * 100.0));
-        let pet_text = Paragraph::new(CAT_ASCII)
+        let pet_text = Paragraph::new(pet_ascii)
             .block(pet_block)
             .alignment(Alignment::Center);
         f.render_widget(pet_text, chunks[0]);
