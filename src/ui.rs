@@ -22,6 +22,22 @@ impl AppUI {
         }
     }
 
+    pub fn scroll_to_bottom(&mut self) {
+        // Calculate total lines including line breaks
+        let total_lines = self.messages.iter().map(|msg| {
+            let line_count = msg.split('\n').count();
+            // Add extra line after pet responses
+            if !msg.starts_with("You: ") {
+                line_count + 1
+            } else {
+                line_count
+            }
+        }).sum();
+        
+        self.scroll_offset = total_lines;
+        self.scroll_state.select(Some(self.scroll_offset));
+    }
+
     pub fn scroll_up(&mut self) {
         if self.scroll_offset > 0 {
             self.scroll_offset -= 1;
@@ -30,15 +46,20 @@ impl AppUI {
     }
 
     pub fn scroll_down(&mut self) {
-        if self.scroll_offset < self.messages.len().saturating_sub(1) {
+        // Calculate total lines same as in scroll_to_bottom
+        let total_lines = self.messages.iter().map(|msg| {
+            let line_count = msg.split('\n').count();
+            if !msg.starts_with("You: ") {
+                line_count + 1
+            } else {
+                line_count
+            }
+        }).sum();
+
+        if self.scroll_offset < total_lines {
             self.scroll_offset += 1;
             self.scroll_state.select(Some(self.scroll_offset));
         }
-    }
-
-    pub fn scroll_to_bottom(&mut self) {
-        self.scroll_offset = self.messages.len().saturating_sub(1);
-        self.scroll_state.select(Some(self.scroll_offset));
     }
 
     pub fn add_message(&mut self, message: String) {
