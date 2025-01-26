@@ -1,6 +1,6 @@
 use crossterm::event::{Event, KeyCode};
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
 
 const CAT_ASCII: &str = r#"
   /\___/\
@@ -76,21 +76,15 @@ impl AppUI {
         f.render_widget(pet_text, chunks[0]);
 
         // Chat history
-        let messages: Vec<ListItem> = self
-            .messages
-            .iter()
-            .map(|m| ListItem::new(Line::from(m.as_str())).style(Style::default()))
-            .collect();
-        let messages_block = Block::default()
-            .borders(Borders::ALL)
-            .title("Chat History");
-
-        let messages_list = List::new(messages)
-            .block(messages_block)
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+        let messages_text = self.messages.join("\n");
+        let messages_paragraph = Paragraph::new(messages_text)
+            .block(Block::default().borders(Borders::ALL).title("Chat History"))
+            .wrap(Wrap { trim: false })
+            .scroll((self.scroll_offset as u16, 0))
+            .alignment(Alignment::Left)
             .style(Style::default());
 
-        f.render_stateful_widget(messages_list, chunks[1], &mut self.scroll_state);
+        f.render_widget(messages_paragraph, chunks[1]);
 
         // Input box
         let input = Paragraph::new(self.input.as_str())
