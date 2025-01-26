@@ -2,6 +2,7 @@ mod pet;
 mod llm;
 mod ui;
 mod config;
+mod config_path;
 
 use crossterm::event::{self, Event, KeyCode};
 use std::time::{Duration, Instant};
@@ -28,8 +29,11 @@ struct App {
 
 impl App {
     fn new() -> Self {
-        let state: PetState = confy::load("petcli", None).unwrap_or_default();
-        let config: config::Config = confy::load("petcli", None).unwrap_or_default();
+        config_path::ensure_config_dir().expect("Failed to create config directory");
+        let config_path = config_path::get_config_file_path(None);
+        let config: config::Config = confy::load_path(&config_path).unwrap_or_default();
+        let mut state: PetState = confy::load("petcli", None).unwrap_or_default();
+        state.name = config.pet_name.clone();
         let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY not found in environment variables");
         let llm = OpenAIBackend::new(api_key);
         let mut ui = AppUI::new();
