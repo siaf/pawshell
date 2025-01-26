@@ -1,12 +1,13 @@
 use crossterm::event::{Event, KeyCode};
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, ListState, Paragraph, Wrap};
+use ratatui::text::{Line, Span};
 
 const CAT_ASCII: &str = r#"
   /\___/\
  (  o o  )
  (  =^=  )
-  (____)"
+  (____)
 "#;
 
 pub struct AppUI {
@@ -76,7 +77,21 @@ impl AppUI {
         f.render_widget(pet_text, chunks[0]);
 
         // Chat history
-        let messages_text = self.messages.join("\n");
+        let messages_text = self.messages.iter().map(|msg| {
+            if msg.starts_with("You: ") {
+                let (prefix, content) = msg.split_at(5);
+                Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(Color::Yellow)),
+                    Span::raw(content)
+                ])
+            } else {
+                let (prefix, content) = msg.split_once(": ").unwrap_or((msg, ""));
+                Line::from(vec![
+                    Span::styled(format!("{}: ", prefix), Style::default().fg(Color::Green)),
+                    Span::raw(content)
+                ])
+            }
+        }).collect::<Vec<Line>>();
         let messages_paragraph = Paragraph::new(messages_text)
             .block(Block::default().borders(Borders::ALL).title("Chat History"))
             .wrap(Wrap { trim: false })
