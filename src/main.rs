@@ -139,6 +139,58 @@ impl App {
                 }
             }
 
+            // Process commands
+            if user_message.starts_with('/') {
+                match user_message.trim() {
+                    "/stats" => {
+                        let stats = format!("Current Stats:\nMood: {:.0}%\nLast Interaction: {}\nChat History: {} messages",
+                            self.state.mood * 100.0,
+                            self.state.last_interaction.format("%Y-%m-%d %H:%M:%S UTC"),
+                            self.state.chat_history.len());
+                        self.ui.add_message(format!("{}: {}", self.state.name, stats));
+                        self.ui.input.clear();
+                        return Ok(());
+                    },
+                    "/clear" => {
+                        self.ui.messages.clear();
+                        self.ui.add_message("Chat window cleared.".to_string());
+                        self.ui.input.clear();
+                        return Ok(());
+                    },
+                    "/purge" => {
+                        self.state.chat_history.clear();
+                        self.ui.messages.clear();
+                        self.ui.add_message("Chat history has been purged from disk.".to_string());
+                        self.save_state()?;
+                        self.ui.input.clear();
+                        return Ok(());
+                    },
+                    "/help" => {
+                        let help = "Available Commands:\n\
+                        /stats - Display current pet statistics\n\
+                        /clear - Clear chat window\n\
+                        /purge - Remove all chat history\n\
+                        /help  - Show this help message\n\
+                        /exit  - Exit the application";
+                        self.ui.add_message(format!("{}: {}", self.state.name, help));
+                        self.ui.input.clear();
+                        return Ok(());
+                    },
+                    "/exit" => {
+                        self.ui.add_message(format!("{}: Goodbye! Take care! 👋", self.state.name));
+                        self.save_state()?;
+                        // Restore terminal state before exit
+                        crossterm::terminal::disable_raw_mode()?;
+                        crossterm::execute!(
+                            std::io::stdout(),
+                            crossterm::terminal::LeaveAlternateScreen
+                        )?;
+                        std::process::exit(0);
+                    },
+                    _ => {}
+                }
+            }
+
             // Update mood and interaction time
             self.state.last_interaction = chrono::Utc::now();
             self.state.mood = (self.state.mood + 0.1).min(1.0);
