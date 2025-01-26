@@ -1,0 +1,53 @@
+command_history_limit = 100  # Adjust this number to your preferred limit
+openai_api_key = "YOUR API KEY"  # Your OpenAI API key
+pet_name = "Lilith"  # Change this to customize your pet's name
+pet_ascii = "
+  /\___/\
+ (  o o  )
+ (  =^=  )
+  (____)
+"  # Current cat appearance
+
+# -- Alternative Pet Options (uncomment your choice) --
+
+# Wise Owl Option
+# pet_name = "Athena"
+# pet_ascii = #"
+#    ,___,
+#   (O,O)
+#   /)_)
+#    ""  "#
+
+# Playful Fox Option
+# pet_name = "Rusty"
+# pet_ascii = "
+#   /\   /\
+#  //\\_//\\
+#  \_     _/
+#   (o o)
+#   (   )
+#    \~/ "
+
+# Loyal Dog Option
+# pet_name = "Scout"
+# pet_ascii = "
+#     /^___^\
+#    ( o o )
+#    \  Y  /
+#     `---' "
+
+# Cute Bunny Option
+# pet_name = "Hoppy"
+# pet_ascii = "
+#   /\\ /\\
+#  ( . . )
+#  c(")(")  "
+
+# Friendly Penguin Option
+# pet_name = "Waddles"
+# pet_ascii = "
+#    __
+#   /  \
+#  |o o|
+#  |>-<|
+#  |__| "
