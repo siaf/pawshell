@@ -1,4 +1,3 @@
-use crossterm::event::KeyCode;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, ListState, Paragraph, Wrap};
 use ratatui::text::{Line, Span};

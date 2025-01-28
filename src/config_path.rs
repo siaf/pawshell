@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub fn get_config_dir() -> PathBuf {
     let home = dirs::home_dir().expect("Could not find home directory");
