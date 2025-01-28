@@ -1,3 +1,16 @@
+//! Core application logic and state management for PetCLI
+//!
+//! This module contains the central App struct and its implementation, managing the overall
+//! application state, user interactions, and integrations with other components. The module
+//! currently handles multiple responsibilities that could potentially be split into separate
+//! modules for better organization:
+//!
+//! Potential refactoring suggestions:
+//! 1. Command History Management: Move shell history loading and processing into a separate module
+//! 2. State Management: Create a dedicated module for handling pet state and persistence
+//! 3. Input Handler: Separate command processing logic into its own module
+//! 4. LLM Integration: Move LLM initialization and interaction logic to a dedicated module
+
 use chrono::Utc;
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -11,6 +24,14 @@ use crate::ui::AppUI;
 use crate::config;
 use crate::config_path;
 
+/// The main application struct that coordinates all components and manages the application state.
+/// 
+/// This struct is responsible for:
+/// - Initializing and managing the UI
+/// - Maintaining the pet's state
+/// - Managing LLM interactions
+/// - Processing user input and commands
+/// - Handling shell history
 pub struct App {
     pub ui: AppUI,
     pub state: PetState,

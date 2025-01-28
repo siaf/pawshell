@@ -1,3 +1,18 @@
+//! PetCLI - An interactive terminal pet companion with LLM capabilities
+//!
+//! This is the main entry point for the PetCLI application. It initializes the terminal
+//! interface and starts the main application loop. The application is organized into several
+//! modules, each handling specific functionality:
+//!
+//! - app: Core application logic and state management
+//! - pet: Pet state and behavior definitions
+//! - llm: Language model interface and implementations
+//! - ui: Terminal user interface components
+//! - config: Configuration management
+//! - config_path: Configuration file path handling
+//! - ollama: Ollama LLM backend implementation
+//! - terminal: Terminal initialization and event handling
+
 mod pet;
 mod llm;
 mod ui;

@@ -1,3 +1,15 @@
+//! Terminal interface and event handling for PetCLI
+//!
+//! This module manages the terminal interface using the crossterm and ratatui libraries.
+//! It handles:
+//! - Terminal initialization and cleanup
+//! - Event processing (keyboard input)
+//! - UI rendering and update loop
+//! - Terminal state management
+//!
+//! Consider splitting the event handling logic into a separate module if the
+//! input handling becomes more complex.
+
 use crossterm::event::{self, Event, KeyCode};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use crossterm::execute;
@@ -7,6 +19,7 @@ use std::time::{Duration, Instant};
 
 use crate::app::App;
 
+/// Terminal wrapper that manages the terminal interface and event loop
 pub struct Terminal<B: Backend + io::Write> {
     terminal: ratatui::Terminal<B>,
 }
