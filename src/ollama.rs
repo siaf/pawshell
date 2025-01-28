@@ -1,55 +1,37 @@
 use async_trait::async_trait;
 use serde_json::Value;
+use crate::llm::LLMBackend;
 
-#[async_trait]
-pub trait LLMBackend {
-    async fn generate_response(&self, prompt: &str) -> Result<String, Box<dyn std::error::Error>>;
-    fn format_prompt(&self, user_input: &str, recent_commands: Option<&[String]>) -> String;
-    fn add_to_history(&mut self, user_message: String, assistant_response: String);
-}
-
-pub struct OpenAIBackend {
-    api_key: String,
+pub struct OllamaBackend {
+    url: String,
     model: String,
     system_prompt: String,
     conversation_history: Vec<(String, String)>,
 }
 
-impl OpenAIBackend {
-    pub fn new(api_key: String) -> Self {
+impl OllamaBackend {
+    pub fn new(url: String, model: String) -> Self {
         Self {
-            api_key,
-            model: String::from("gpt-3.5-turbo"),
-            system_prompt: String::from("You are a knowledgeable terminal companion with a friendly personality. You understand that your user is an experienced developer who is newer to Linux and interested in learning Vim. As an expert in shell commands and workflows, your primary focus is providing practical, intelligent suggestions for improving terminal usage. When analyzing command history, suggest optimizations like:
-- More efficient command combinations using pipes and redirections
-- Modern alternatives to traditional tools
-- Helpful aliases or shell functions
-- Better workflows and time-saving techniques
-- Beginner-friendly Vim tips and Linux command explanations when relevant
-
-Keep responses concise and focused on technical value, while maintaining a light, approachable tone. You can occasionally use cat-themed expressions or emojis when appropriate, but prioritize delivering useful terminal insights. Balance between general workflow improvements and specific Linux/Vim learning opportunities based on the context. If you notice patterns in command usage that could be improved, share your expertise in a clear, professional way."),
+            url,
+            model,
+            system_prompt: String::from("You are a knowledgeable terminal companion with a friendly personality. You understand that your user is an experienced developer who is newer to Linux and interested in learning Vim. As an expert in shell commands and workflows, your primary focus is providing practical, intelligent suggestions for improving terminal usage. When analyzing command history, suggest optimizations like:\n- More efficient command combinations using pipes and redirections\n- Modern alternatives to traditional tools\n- Helpful aliases or shell functions\n- Better workflows and time-saving techniques\n- Beginner-friendly Vim tips and Linux command explanations when relevant\n\nKeep responses concise and focused on technical value, while maintaining a light, approachable tone. You can occasionally use cat-themed expressions or emojis when appropriate, but prioritize delivering useful terminal insights. Balance between general workflow improvements and specific Linux/Vim learning opportunities based on the context. If you notice patterns in command usage that could be improved, share your expertise in a clear, professional way."),
             conversation_history: Vec::new(),
         }
     }
 }
 
 #[async_trait]
-impl LLMBackend for OpenAIBackend {
+impl LLMBackend for OllamaBackend {
     async fn generate_response(&self, prompt: &str) -> Result<String, Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
         let response = client
-            .post("https://api.openai.com/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .post(format!("{}/api/generate", self.url))
             .header("Content-Type", "application/json")
             .json(&serde_json::json!({
                 "model": self.model,
-                "messages": [{
-                    "role": "system",
-                    "content": self.system_prompt
-                }, {
-                    "role": "user",
-                    "content": prompt
-                }]
+                "prompt": format!("{}
+{}", self.system_prompt, prompt),
+                "stream": false
             }))
             .send()
             .await
@@ -65,7 +47,7 @@ impl LLMBackend for OpenAIBackend {
         let response_data: Value = serde_json::from_str(&response_text)
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
-        Ok(response_data["choices"][0]["message"]["content"]
+        Ok(response_data["response"]
             .as_str()
             .unwrap_or("*meows confusedly* Something went wrong with my response...")
             .to_string())

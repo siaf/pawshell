@@ -3,6 +3,7 @@ mod llm;
 mod ui;
 mod config;
 mod config_path;
+mod ollama;
 
 use crossterm::event::{self, Event, KeyCode};
 use std::time::{Duration, Instant};
@@ -10,6 +11,8 @@ use dotenv::dotenv;
 
 use crate::pet::PetState;
 use crate::llm::{OpenAIBackend, LLMBackend};
+use crate::ollama::OllamaBackend;
+use crate::config::LLMProvider;
 use crate::ui::AppUI;
 
 use ratatui::prelude::*;
@@ -22,7 +25,7 @@ use dirs;
 struct App {
     ui: AppUI,
     state: PetState,
-    llm: OpenAIBackend,
+    llm: Box<dyn LLMBackend>,
     recent_commands: Vec<String>,
     config: config::Config,
 }
@@ -43,8 +46,21 @@ impl App {
         };
         let mut state: PetState = confy::load("petcli", None).unwrap_or_default();
         state.name = config.pet_name.clone();
-        let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY not found in environment variables");
-        let llm = OpenAIBackend::new(api_key);
+
+        let llm: Box<dyn LLMBackend> = match config.llm_provider {
+            LLMProvider::OpenAI => {
+                let api_key = std::env::var("OPENAI_API_KEY")
+                    .expect("OPENAI_API_KEY not found in environment variables");
+                Box::new(OpenAIBackend::new(api_key))
+            },
+            LLMProvider::Ollama => {
+                Box::new(OllamaBackend::new(
+                    config.ollama_url.clone(),
+                    config.ollama_model.clone(),
+                ))
+            }
+        };
+
         let mut ui = AppUI::new();
 
         // Load chat history into messages

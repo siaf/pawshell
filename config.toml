@@ -1,5 +1,7 @@
 command_history_limit = 100  # Adjust this number to your preferred limit
-openai_api_key = "YOUR API KEY"  # Your OpenAI API key
+llm_provider = "Ollama"  # Choose between "OpenAI" or "Ollama"
+ollama_url = "http://localhost:11434"  # Ollama API endpoint
+ollama_model = "llama3.2"  # Ollama model to use
 pet_name = "Lilith"  # Change this to customize your pet's name
 pet_ascii = "
   /\___/\
