@@ -1,6 +1,6 @@
-# PetCLI - Your Terminal Pet Companion
+# pawshell - Your Terminal Pet Companion
 
-PetCLI is a delightful terminal-based virtual pet companion that combines the charm of a virtual pet with the power of a command-line assistant. Your pet not only keeps you company but also helps you with terminal commands and provides a friendly chat interface.
+pawshell is a delightful terminal-based virtual pet companion that combines the charm of a virtual pet with the power of a command-line assistant. Your pet not only keeps you company but also helps you with terminal commands and provides a friendly chat interface.
 
 ## Features
 
@@ -27,7 +27,7 @@ PetCLI is a delightful terminal-based virtual pet companion that combines the ch
 
 ## Configuration
 
-PetCLI can be customized through the `config.toml` file, which is automatically created in your config directory. You can modify:
+pawshell can be customized through the `config.toml` file, which is automatically created in your config directory. You can modify:
 
 - Pet's name
 - ASCII art representation
